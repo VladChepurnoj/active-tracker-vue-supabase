@@ -11,7 +11,10 @@
     <!-- create -->
     <div class="p-8 flex items-start bg-light-grey rounded-md shadow-lg">
       <!-- form -->
-      <form class="flex flex-col gap-y-5 w-full">
+      <form
+        @submit.prevent="createWorkout"
+        class="flex flex-col gap-y-5 w-full"
+      >
         <h1 class="text-2xl text-at-light-green">Record workout</h1>
 
         <!-- workout name -->
@@ -38,6 +41,7 @@
             id="workout-type"
             class="p-2 text-grey-500 focus:outline-none"
             v-model="workoutType"
+            @change="workoutChange"
           >
             <option value="select-workout">Select Workout</option>
             <option value="strength">Strength Training</option>
@@ -103,6 +107,7 @@
             </div>
 
             <img
+              @click="deleteExercise(item.id)"
               src="@/assets/images/trash-light-green.png"
               alt=""
               class="h-4 w-auto absolute -left-5 cursor-pointer"
@@ -177,6 +182,7 @@
             </div>
 
             <img
+              @click="deleteExercise(item.id)"
               src="@/assets/images/trash-light-green.png"
               alt=""
               class="h-4 w-auto absolute -left-5 cursor-pointer"
@@ -205,6 +211,7 @@
 <script>
 import { ref } from "vue";
 import { uid } from "uid";
+import { supabase } from "../supabase/init";
 export default {
   name: "create",
   setup() {
@@ -236,10 +243,51 @@ export default {
       });
     };
     // Delete exercise
+    const deleteExercise = (id) => {
+      if (exercises.value.length > 1) {
+        exercises.value = exercises.value.filter(
+          (exercise) => exercise.id !== id
+        );
+        return;
+      }
+      errorMsg.value =
+        "Error: cannot remove, need to at least have one exercise";
+      setTimeout(() => {
+        errorMsg.value = false;
+      }, 5000);
+    };
 
     // Listens for chaging of workout type input
+    const workoutChange = () => {
+      exercises.value = [];
+      addExercise();
+    };
 
     // Create workout
+    const createWorkout = async () => {
+      try {
+        const { error } = await supabase.from("workouts").insert([
+          {
+            workoutName: workoutName.value,
+            workoutType: workoutType.value,
+            exercises: exercises.value,
+          },
+        ]);
+        if (error) throw error;
+        statusMsg.value = "Success: workout created";
+        workoutName.value = null;
+        workoutType.value = "select-workout";
+        exercises.value = [];
+        setTimeout(() => {
+          statusMsg.value = false;
+        }, 5000);
+      } catch (error) {
+        errorMsg.value = `Error: ${error.message}`;
+        setTimeout(() => {
+          errorMsg.value = false;
+        }, 5000);
+      }
+    };
 
     return {
       workoutName,
@@ -248,6 +296,9 @@ export default {
       statusMsg,
       errorMsg,
       addExercise,
+      workoutChange,
+      deleteExercise,
+      createWorkout,
     };
   },
 };
